@@ -44,6 +44,8 @@ const userChoices = [
     "View all Roles",
     "View all Employees By Department",
     "View all Employees By Manager",
+    new inquirer.Separator("----------VIEW BUDGET-----------"),
+    "View all Departments Budget",
     new inquirer.Separator("----------ADD/REMOVE-----------"),
     "Add Employee",
     "Add Department",
@@ -54,7 +56,7 @@ const userChoices = [
     "Update Employee Manager",
     new inquirer.Separator("----------EXIT-----------"),
     "Exit",
-    new inquirer.Separator("-------------------------")];
+    new inquirer.Separator("-------------------------\n")];
 
 // function which prompts the user for what action they should take
 function start() {
@@ -98,6 +100,9 @@ function start() {
                 updateEmployeeRole();
             }else if (answer.action === "Update Employee Manager") {
                 updateEmployeeManager();
+            }
+            else if (answer.action === "View all Departments Budget") {
+                viewBudget();
             }else if (answer.action === "Exit") {
                 connection.end();
             }
@@ -153,7 +158,7 @@ function viewAllRoles() {
 //   VIEW EMPLOYEES BY DEPARTMENT
 // =============================================================================================
 function viewAllEmployeesByDepartment() {
-    const query = `SELECT department.name as department, COUNT(e.id) as employee_number
+    const query = `SELECT department.name as department, COUNT(e.id) as employee_count
     FROM employee e 
     LEFT JOIN role  
     on e.role_id = role.id 
@@ -168,6 +173,80 @@ function viewAllEmployeesByDepartment() {
     });
 }
 
+// =============================================================================================
+//   VIEW BUDGET BY DEPARTMENT
+// =============================================================================================
+
+function viewBudget()
+{
+    const query = `SELECT department.name AS department, sum(role.salary) AS budget FROM employee 
+    LEFT JOIN role
+    ON employee.role_id = role.id
+    LEFT JOIN department
+    ON role.department_id = department.id
+    GROUP BY department.id;`;
+    connection.query(query, function (err, result) {
+        if (err) throw err;
+        console.table(result);
+        start();
+    });
+
+}
+
+// =============================================================================================
+//   VIEW EMPLOYEES BY MANGER
+// =============================================================================================
+
+function  viewAllEmployeesByManager(){
+
+    connection.query("SELECT * FROM employee", function (err, employees) {
+        if (err) throw err;
+        inquirer
+        .prompt([
+            {
+                name: "name",
+                type: "rawlist",
+                message: "Select the manger name to view all the employees with the selected manager?",
+                choices: function () {
+                    // console.log(employee);
+                    var choiceArray = [];
+                    for (var i = 0; i < employees.length; i++) {
+                        choiceArray.push(employees[i].first_name + " " + employees[i].last_name);
+                    }
+                    return choiceArray;
+                }
+
+            }])
+            .then(function(answer){
+
+                var chosenManager  = null;
+                for (var i = 0; i < employees.length; i++) {
+                    if (employees[i].first_name + " " + employees[i].last_name === answer.name) {
+                        chosenManager = employees[i].id;
+                        break;
+                    }
+                }
+
+                connection.query(`SELECT c.id, c.first_name, c.last_name,role.title, department.name as department, role.salary , concat(p.first_name," ", p.last_name) as manager  FROM employee c 
+                LEFT JOIN role 
+                on c.role_id = role.id 
+                LEFT JOIN department
+                ON role.department_id = department.id 
+                LEFT join employee p 
+                on c.manager_id = p.id
+                where c.manager_id = ?`, [chosenManager], function (err, result) {
+                    if (err) throw err;
+                    console.table(result);
+                    start();
+                });
+
+
+            })
+            .catch(function(err){
+                throw err;
+            });
+    });
+}
 
 // =============================================================================================
 //   Add new employee
@@ -606,6 +685,7 @@ function updateSelectedEmployeeManager(employees) {
                 for (var i = 0; i < employees.length; i++) {
                     choiceArray.push(employees[i].first_name + " " + employees[i].last_name);
                 }
+                
                 return choiceArray;
             },
 
@@ -620,6 +700,7 @@ function updateSelectedEmployeeManager(employees) {
                 for (var i = 0; i < employees.length; i++) {
                     choiceArray.push(employees[i].first_name + " " + employees[i].last_name);
                 }
+                choiceArray.push("None");
                 return choiceArray;
             }
         }
@@ -634,7 +715,7 @@ function updateSelectedEmployeeManager(employees) {
                 }
             }
 
-            var chosenManager;
+            var chosenManager  = null;
             for (var i = 0; i < employees.length; i++) {
                 if (employees[i].first_name + " " + employees[i].last_name === answer.manager) {
                     chosenManager = employees[i].id;
