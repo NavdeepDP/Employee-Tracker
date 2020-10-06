@@ -1,3 +1,6 @@
+// =============================================================================================
+//   INCLUDE NPM PACKAGES
+// =============================================================================================
 var mysql = require("mysql");
 var inquirer = require("inquirer");
 
@@ -5,17 +8,16 @@ var inquirer = require("inquirer");
 const chalk = require('chalk');
 const figlet = require('figlet');
 
+// =============================================================================================
+//   SQL CONNECTION
+// =============================================================================================
 // create the connection information for the sql database
 var connection = mysql.createConnection({
     host: "localhost",
 
     // Your port; if not 3306
-    port: 3306,
-
-    // Your username
+    port: 3306,  
     user: "root",
-
-    // Your password
     password: "mysqlroot1@np",
     database: "employee_DB"
 });
@@ -32,27 +34,27 @@ connection.connect(function (err) {
     start();
 });
 
-// test function to display all the employees
-function test() {
-    connection.query("SELECT * FROM employee", function (err, result) {
-        if (err) throw err;
-        console.table(result);
-    });
-
-}
-
-const userChoices = ["View all Employees",
+// =============================================================================================
+//   USER INPUT TO INTERACT WITH EMPLOYEE MANGER SYSTEM
+// =============================================================================================
+const userChoices = [
+    new inquirer.Separator("----------VIEWS-----------"),
+    "View all Employees",
     "View all Departments",
     "View all Roles",
     "View all Employees By Department",
     "View all Employees By Manager",
+    new inquirer.Separator("----------ADD/REMOVE-----------"),
     "Add Employee",
     "Add Department",
     "Add Role",
     "Remove Employee",
+    new inquirer.Separator("----------UPDATE-----------"),
     "Update Employee Role",
     "Update Employee Manager",
-    "None"];
+    new inquirer.Separator("----------EXIT-----------"),
+    "Exit",
+    new inquirer.Separator("-------------------------")];
 
 // function which prompts the user for what action they should take
 function start() {
@@ -94,12 +96,16 @@ function start() {
             }
             else if (answer.action === "Update Employee Role") {
                 updateEmployeeRole();
-            } else if (answer.action === "None") {
+            }else if (answer.action === "Update Employee Manager") {
+                updateEmployeeManager();
+            }else if (answer.action === "Exit") {
                 connection.end();
             }
         });
 }
-
+// =============================================================================================
+//   VIEW ALL EMPLOYEES
+// =============================================================================================
 
 function viewAllEmployees() {
     const query = `SELECT c.id, c.first_name, c.last_name,role.title, department.name as department, role.salary , concat(p.first_name," ", p.last_name) as manager  FROM employee c 
@@ -117,7 +123,9 @@ function viewAllEmployees() {
     });
 }
 
-
+// =============================================================================================
+//   VIEW ALL DEPARTMENTS
+// =============================================================================================
 function viewAllDepartment() {
     query = `SELECT id, name as department FROM DEPARTMENT`;
     connection.query(query, function (err, result) {
@@ -126,10 +134,14 @@ function viewAllDepartment() {
         start();
     });
 }
-
+// =============================================================================================
+//   VIEW ALL ROLES
+// =============================================================================================
 
 function viewAllRoles() {
-    query = `SELECT id, title as role FROM role`;
+    query = `SELECT role.id, title as role , salary , department.name as department FROM role
+    LEFT JOIN department
+    on role.department_id = department.id `;
     connection.query(query, function (err, result) {
         if (err) throw err;
         console.table(result);
@@ -137,6 +149,9 @@ function viewAllRoles() {
     });
 }
 
+// =============================================================================================
+//   VIEW EMPLOYEES BY DEPARTMENT
+// =============================================================================================
 function viewAllEmployeesByDepartment() {
     const query = `SELECT department.name as department, COUNT(e.id) as employee_number
     FROM employee e 
@@ -154,7 +169,9 @@ function viewAllEmployeesByDepartment() {
 }
 
 
-
+// =============================================================================================
+//   Add new employee
+// =============================================================================================
 function getEmployeeDetails(results, employee) {
     inquirer
         .prompt([
@@ -255,6 +272,9 @@ function addEmployee() {
 
 }
 
+// =============================================================================================
+//   Add New Department
+// =============================================================================================
 
 function addDepartment() {
     connection.query("SELECT * FROM department", function (err, results) {
@@ -287,8 +307,7 @@ function addDepartment() {
                         },
                         function (err) {
                             if (err) throw err;
-                            console.log("Department added successfully!");
-                            // re-prompt the user for if they want to bid or post
+                            console.log("Department added successfully!");                            
 
                         });
 
@@ -300,12 +319,12 @@ function addDepartment() {
             .catch(function (err) {
                 throw err;
             });
-
-
     });
 }
 
-
+// =============================================================================================
+//   Add New Role
+// =============================================================================================
 function getRoleDetails(roles, departments) {
     inquirer
         .prompt([
@@ -337,7 +356,7 @@ function getRoleDetails(roles, departments) {
             },
         ])
         .then(function (answer) {
-            console.log(answer);
+            // console.log(answer);
 
             let alreadyExist = false;
             for (var i = 0; i < roles.length; i++) {
@@ -371,8 +390,7 @@ function getRoleDetails(roles, departments) {
                     },
                     function (err) {
                         if (err) throw err;
-                        console.log("Role added successfully!");
-                        // re-prompt the user for if they want to bid or post
+                        console.log("Role added successfully!");                        
                         start();
                     });
             }
@@ -391,6 +409,9 @@ function addRole() {
     });
 }
 
+// =============================================================================================
+//   Remove Employee
+// =============================================================================================
 function removeSelectedEmployee(employee) {
 
 
@@ -471,6 +492,9 @@ function removeEmployee() {
 
 }
 
+// =============================================================================================
+//   Update Employee Role
+// =============================================================================================
 
 function updateSelectedEmployeeRole(employees, roles) {
     inquirer.prompt([
@@ -560,6 +584,100 @@ function updateEmployeeRole() {
 
             updateSelectedEmployeeRole(employees, roles)
         });
+
+    });
+
+}
+
+
+// =============================================================================================
+//   Update Employee Manager
+// =============================================================================================
+
+
+function updateSelectedEmployeeManager(employees) {
+    inquirer.prompt([
+        {
+            name: "employee",
+            type: "rawlist",
+            message: "Which employee's manager do you want to update?",
+            choices: function () {
+                var choiceArray = [];
+                for (var i = 0; i < employees.length; i++) {
+                    choiceArray.push(employees[i].first_name + " " + employees[i].last_name);
+                }
+                return choiceArray;
+            },
+
+        },
+
+        {
+            name: "manager",
+            type: "rawlist",
+            message: "Which employee do you want to set as the manager for the selected employee?",
+            choices: function () {
+                var choiceArray = [];
+                for (var i = 0; i < employees.length; i++) {
+                    choiceArray.push(employees[i].first_name + " " + employees[i].last_name);
+                }
+                return choiceArray;
+            }
+        }
+    ])
+        .then(function (answer) {
+
+            var chosenEmployee;
+            for (var i = 0; i < employees.length; i++) {
+                if (employees[i].first_name + " " + employees[i].last_name === answer.employee) {
+                    chosenEmployee = employees[i].id;
+                    break;
+                }
+            }
+
+            var chosenManager;
+            for (var i = 0; i < employees.length; i++) {
+                if (employees[i].first_name + " " + employees[i].last_name === answer.manager) {
+                    chosenManager = employees[i].id;
+                    break;
+                }
+            }
+
+
+            connection.query(
+                "UPDATE employee SET ? WHERE ?",
+                [
+                    {
+                        manager_id: chosenManager
+                    },
+                    {
+                        id: chosenEmployee
+                    }
+                ],
+                function (error) {
+                    if (error) throw err;
+
+                    console.log("Employee manager updated successfully!");
+                    start();
+
+                }
+            );
+
+
+
+        })
+        .catch(function (err) {
+            throw err;
+        });
+
+
+}
+
+function updateEmployeeManager() {
+    connection.query("SELECT * FROM employee", function (err, employees) {
+        if (err) throw err;
+
+            updateSelectedEmployeeManager(employees)
+
 
     });
 
