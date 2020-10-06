@@ -20,8 +20,10 @@ the user to view, add, modify and delete information. User can:
 - Update employee managers
 - Delete employees
 
-![Readme Image](./assets/empTracker.png)
-![Readme Image](./assets/employee_tracker.gif)
+![Readme Image](./Assets/empTracker.png)
+
+
+![Readme Image](./Assets/employee_tracker.gif)
 
 ## Installation
 
