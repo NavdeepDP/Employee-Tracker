@@ -17,7 +17,7 @@ var connection = mysql.createConnection({
     host: "localhost",
 
     // Your port; if not 3306
-    port: 3306,  
+    port: 3306,
     user: "root",
     password: "mysqlroot1@np",
     database: "employee_DB"
@@ -99,12 +99,12 @@ function start() {
             }
             else if (answer.action === "Update Employee Role") {
                 updateEmployeeRole();
-            }else if (answer.action === "Update Employee Manager") {
+            } else if (answer.action === "Update Employee Manager") {
                 updateEmployeeManager();
             }
             else if (answer.action === "View all Departments Budget") {
                 viewBudget();
-            }else if (answer.action === "Exit") {
+            } else if (answer.action === "Exit") {
                 connection.end();
             }
         });
@@ -159,18 +159,41 @@ function viewAllRoles() {
 //   VIEW EMPLOYEES BY DEPARTMENT
 // =============================================================================================
 function viewAllEmployeesByDepartment() {
-    const query = `SELECT department.name as department, COUNT(e.id) as employee_count
-    FROM employee e 
-    LEFT JOIN role  
-    on e.role_id = role.id 
-    LEFT JOIN department 
-    ON role.department_id = department.id
-    group by department.name ;`;
 
-    connection.query(query, function (err, result) {
+    connection.query("SELECT * FROM department", function (err, data) {
         if (err) throw err;
-        console.table(result);
-        start();
+        const formattedData = data.map(function(object){
+            let newObject = {};
+            newObject.name = object.name;
+            newObject.value = object.id;
+            return newObject;
+        });
+
+        inquirer.prompt([{
+            name:"department",
+            message:"Which department would you like to search",
+            type: "list",
+            choices: formattedData
+        }])
+        .then(function(response){
+
+            connection.query(`SELECT e.id, e.first_name, e.last_name,role.title,  role.salary,department.name as department
+            FROM employee e 
+            LEFT JOIN role  
+            on e.role_id = role.id 
+            LEFT JOIN department 
+            ON role.department_id = department.id
+            where department.id = ?;`,[response.department], function (err, result) {
+                if (err) throw err;
+                console.table(result);
+                start();
+            });
+
+        })
+        .catch();
+
+
+
     });
 }
 
@@ -178,8 +201,7 @@ function viewAllEmployeesByDepartment() {
 //   VIEW BUDGET BY DEPARTMENT
 // =============================================================================================
 
-function viewBudget()
-{
+function viewBudget() {
     const query = `SELECT department.name AS department, sum(role.salary) AS budget FROM employee 
     LEFT JOIN role
     ON employee.role_id = role.id
@@ -198,29 +220,29 @@ function viewBudget()
 //   VIEW EMPLOYEES BY MANGER
 // =============================================================================================
 
-function  viewAllEmployeesByManager(){
+function viewAllEmployeesByManager() {
 
     connection.query("SELECT * FROM employee", function (err, employees) {
         if (err) throw err;
         inquirer
-        .prompt([
-            {
-                name: "name",
-                type: "rawlist",
-                message: "Select the manger name to view all the employees with the selected manager?",
-                choices: function () {
-                    // console.log(employee);
-                    var choiceArray = [];
-                    for (var i = 0; i < employees.length; i++) {
-                        choiceArray.push(employees[i].first_name + " " + employees[i].last_name);
+            .prompt([
+                {
+                    name: "name",
+                    type: "rawlist",
+                    message: "Select the manger name to view all the employees with the selected manager?",
+                    choices: function () {
+                        // console.log(employee);
+                        var choiceArray = [];
+                        for (var i = 0; i < employees.length; i++) {
+                            choiceArray.push(employees[i].first_name + " " + employees[i].last_name);
+                        }
+                        return choiceArray;
                     }
-                    return choiceArray;
-                }
 
-            }])
-            .then(function(answer){
+                }])
+            .then(function (answer) {
 
-                var chosenManager  = null;
+                var chosenManager = null;
                 for (var i = 0; i < employees.length; i++) {
                     if (employees[i].first_name + " " + employees[i].last_name === answer.name) {
                         chosenManager = employees[i].id;
@@ -243,7 +265,7 @@ function  viewAllEmployeesByManager(){
 
 
             })
-            .catch(function(err){
+            .catch(function (err) {
                 throw err;
             });
     });
@@ -387,7 +409,7 @@ function addDepartment() {
                         },
                         function (err) {
                             if (err) throw err;
-                            console.log("Department added successfully!");                            
+                            console.log("Department added successfully!");
 
                         });
 
@@ -470,7 +492,7 @@ function getRoleDetails(roles, departments) {
                     },
                     function (err) {
                         if (err) throw err;
-                        console.log("Role added successfully!");                        
+                        console.log("Role added successfully!");
                         start();
                     });
             }
@@ -686,7 +708,7 @@ function updateSelectedEmployeeManager(employees) {
                 for (var i = 0; i < employees.length; i++) {
                     choiceArray.push(employees[i].first_name + " " + employees[i].last_name);
                 }
-                
+
                 return choiceArray;
             },
 
@@ -716,7 +738,7 @@ function updateSelectedEmployeeManager(employees) {
                 }
             }
 
-            var chosenManager  = null;
+            var chosenManager = null;
             for (var i = 0; i < employees.length; i++) {
                 if (employees[i].first_name + " " + employees[i].last_name === answer.manager) {
                     chosenManager = employees[i].id;
@@ -758,7 +780,7 @@ function updateEmployeeManager() {
     connection.query("SELECT * FROM employee", function (err, employees) {
         if (err) throw err;
 
-            updateSelectedEmployeeManager(employees)
+        updateSelectedEmployeeManager(employees)
 
 
     });
