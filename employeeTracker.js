@@ -224,31 +224,22 @@ function viewAllEmployeesByManager() {
 
     connection.query("SELECT * FROM employee", function (err, employees) {
         if (err) throw err;
+        const formattedData = employees.map(function(object){
+            let newObject = {};
+            newObject.name = object.first_name + " " + object.last_name,
+            newObject.value = object.id;
+            return newObject;
+        });
+        
         inquirer
             .prompt([
                 {
-                    name: "name",
-                    type: "rawlist",
+                    name: "employee",
+                    type: "list",
                     message: "Select the manger name to view all the employees with the selected manager?",
-                    choices: function () {
-                        // console.log(employee);
-                        var choiceArray = [];
-                        for (var i = 0; i < employees.length; i++) {
-                            choiceArray.push(employees[i].first_name + " " + employees[i].last_name);
-                        }
-                        return choiceArray;
-                    }
-
+                    choices:formattedData
                 }])
             .then(function (answer) {
-
-                var chosenManager = null;
-                for (var i = 0; i < employees.length; i++) {
-                    if (employees[i].first_name + " " + employees[i].last_name === answer.name) {
-                        chosenManager = employees[i].id;
-                        break;
-                    }
-                }
 
                 connection.query(`SELECT c.id, c.first_name, c.last_name,role.title, department.name as department, role.salary , concat(p.first_name," ", p.last_name) as manager  FROM employee c 
                 LEFT JOIN role 
@@ -257,7 +248,7 @@ function viewAllEmployeesByManager() {
                 ON role.department_id = department.id 
                 LEFT join employee p 
                 on c.manager_id = p.id
-                where c.manager_id = ?`, [chosenManager], function (err, result) {
+                where c.manager_id = ?`, [answer.employee], function (err, result) {
                     if (err) throw err;
                     console.table(result);
                     start();
